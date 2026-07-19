@@ -133,7 +133,22 @@ impl Mirror {
     }
 
     pub fn resize(&mut self, cols: u16, rows: u16) {
-        self.engine.resize(cols, rows);
+        // vt100 엔진(doy 크레이트)의 set_size 는 폭 축소 시 각 행을 잘라내고 재감김(reflow)을 하지
+        // 않는다 — 좁아지면 폭 밖 내용이 소실된다(계약 assert_resize_reflow 가 잡는 결함). 그래서 폭이
+        // 바뀌는 비 alt(스크롤백) 화면은 현재 상태를 폭-강건 재생 시퀀스(rehydrate: paint_primary 는
+        // 개행 기반이라 어느 폭에서든 재감긴다 + 커서 + 모드)로 뽑아 새 폭 엔진에 재주입해 재감김을
+        // 재현한다 — 내용이 보존되고 결과가 네이티브 reflow 엔진과 같아진다. alt-screen 은 TUI 가 소유한
+        // 고정 격자(라이브 TUI 가 리사이즈에 스스로 재그림)라 재감김 대상이 아니고, 폭 불변이면 잘림이
+        // 없으므로, 둘 다 네이티브 resize(행수만 조정)로 충분하다.
+        if cols == self.engine.cols() || self.engine.alt_active() {
+            self.engine.resize(cols, rows);
+            return;
+        }
+        let replay = self.rehydrate();
+        self.engine = Engine::new(cols, rows);
+        self.frozen_primary = None;
+        self.held.clear();
+        self.engine.feed(&replay);
     }
 
     /// warm 재부착 재생 시퀀스 — 신선한 터미널에 먹이면 세션의 화면 상태(스크롤백·

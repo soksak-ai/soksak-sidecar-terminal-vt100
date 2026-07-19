@@ -119,8 +119,8 @@ dependencies = [
 
 [[package]]
 name = "soksak-contract-terminal"
-version = "0.1.0"
-source = "git+https://github.com/soksak-ai/soksak-contract-terminal.git?rev=f2713250487fd6461e3e742bc27cde25dbabb548#f2713250487fd6461e3e742bc27cde25dbabb548"
+version = "0.0.1"
+source = "git+https://github.com/soksak-ai/soksak-contract-terminal.git?rev=8d5a417319d43090fdd690e34fc21c0dfbd20644#8d5a417319d43090fdd690e34fc21c0dfbd20644"
 
 [[package]]
 name = "soksak-sidecar-terminal-vt100"
