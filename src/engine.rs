@@ -25,64 +25,17 @@
 
 use std::cell::RefCell;
 
-use vt100::{Callbacks, Color, MouseProtocolEncoding, MouseProtocolMode, Parser, Screen as VtScreen};
+use soksak_kit_sidecar_terminal::mirror::TerminalEngine;
+pub use soksak_kit_sidecar_terminal::mirror::{
+    TerminalCell as GridCell, TerminalColor as ColorSnap, TerminalModes as ModeSnap,
+};
+use vt100::{
+    Callbacks, Color, MouseProtocolEncoding, MouseProtocolMode, Parser, Screen as VtScreen,
+};
 
 /// 엔진이 유지하는 스크롤백 행 수. 바이트 충실 복원의 바닥 — 전체 의미 이력은
 /// command_blocks(app.data)가 소유하고, 이 수치는 화면 재현용 창이다.
 pub const MIRROR_SCROLLBACK_LINES: usize = 1000;
-
-// ── 엔진-중립 스냅샷 타입(계약의 비교 통화 — 두 엔진 유닛 공용) ──────────────
-
-/// 색 스냅샷 — 엔진 타입을 밖으로 새지 않게 자체 표현으로 고정한다.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ColorSnap {
-    Default,
-    Named(u8),
-    Indexed(u8),
-    Rgb(u8, u8, u8),
-}
-
-/// 복원 대상 private mode 집합의 스냅샷(rehydrate 가 재현해야 하는 전부).
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct ModeSnap {
-    pub bracketed_paste: bool,
-    pub app_cursor: bool,
-    pub app_keypad: bool,
-    pub mouse_click: bool,
-    pub mouse_drag: bool,
-    pub mouse_motion: bool,
-    pub sgr_mouse: bool,
-    pub utf8_mouse: bool,
-    pub focus_in_out: bool,
-    pub alternate_scroll: bool,
-    pub show_cursor: bool,
-    pub line_wrap: bool,
-    pub insert: bool,
-}
-
-/// 직렬화기가 읽는 엔진-중립 셀 — 직렬화에 필요한 것을 다 담는다(spacer·wrapline·zerowidth
-/// 포함). 이 타입 하나가 직렬화기의 그리드 읽기 단일 창이다 — 엔진 세부는 이 파일 밖으로
-/// 나가지 않는다.
-pub struct GridCell {
-    pub ch: char,
-    pub fg: ColorSnap,
-    pub bg: ColorSnap,
-    pub bold: bool,
-    pub dim: bool,
-    pub italic: bool,
-    pub underline: bool,
-    pub inverse: bool,
-    pub strikeout: bool,
-    pub hidden: bool,
-    /// wide 문자 본체(2칸 점유의 첫 칸).
-    pub wide: bool,
-    /// wide 문자 스페이서(본체 뒤 칸) — 직렬화기가 건너뛴다.
-    pub spacer: bool,
-    /// WRAPLINE — 마지막 칸에서만 의미: 이 행이 자연 개행(wrap)으로 이어진다.
-    pub wrapline: bool,
-    /// 결합 문자(zero-width) 후속.
-    pub zerowidth: Vec<char>,
-}
 
 fn blank_cell() -> GridCell {
     GridCell {
@@ -100,6 +53,50 @@ fn blank_cell() -> GridCell {
         spacer: false,
         wrapline: false,
         zerowidth: Vec::new(),
+    }
+}
+
+impl TerminalEngine for Engine {
+    fn new(cols: u16, rows: u16) -> Self {
+        Engine::new(cols, rows)
+    }
+    fn feed(&mut self, bytes: &[u8]) {
+        Engine::feed(self, bytes);
+    }
+    fn resize(&mut self, cols: u16, rows: u16) {
+        Engine::resize(self, cols, rows);
+    }
+    fn resize_with_replay(&mut self, cols: u16, rows: u16, replay: &[u8]) {
+        if (cols == self.cols() && rows == self.rows()) || self.alt_active() {
+            self.resize(cols, rows);
+            return;
+        }
+        *self = Engine::new(cols, rows);
+        self.feed(replay);
+    }
+    fn cols(&self) -> u16 {
+        Engine::cols(self)
+    }
+    fn rows(&self) -> u16 {
+        Engine::rows(self)
+    }
+    fn cursor(&self) -> (usize, usize) {
+        Engine::cursor(self)
+    }
+    fn alt_active(&self) -> bool {
+        Engine::alt_active(self)
+    }
+    fn history_size(&self) -> usize {
+        Engine::history_size(self)
+    }
+    fn modes(&self) -> ModeSnap {
+        Engine::modes(self)
+    }
+    fn line_cells(&self, line: i32) -> Vec<GridCell> {
+        Engine::line_cells(self, line)
+    }
+    fn suppressed_replies(&self) -> u64 {
+        Engine::suppressed_replies(self)
     }
 }
 
@@ -123,7 +120,13 @@ impl VtCallbacks {
     fn new() -> Self {
         // 계약이 선언한 출생 상태(SPEC.md §11.I): 자동 줄바꿈(DECAWM)은 켜짐, alternate
         // scroll(1007)·focus·insert 는 꺼짐. 엔진의 기본값이 아니라 계약의 선언이 기준이다.
-        VtCallbacks { suppressed: 0, focus_in_out: false, alternate_scroll: false, line_wrap: true, insert: false }
+        VtCallbacks {
+            suppressed: 0,
+            focus_in_out: false,
+            alternate_scroll: false,
+            line_wrap: true,
+            insert: false,
+        }
     }
 }
 
@@ -192,8 +195,13 @@ impl Engine {
         let cols = cols.max(1);
         let rows = rows.max(1);
         // vt100 Parser::new 는 (rows, cols, scrollback) 순서.
-        let parser = Parser::new_with_callbacks(rows, cols, MIRROR_SCROLLBACK_LINES, VtCallbacks::new());
-        Engine { parser: RefCell::new(parser), cols, rows }
+        let parser =
+            Parser::new_with_callbacks(rows, cols, MIRROR_SCROLLBACK_LINES, VtCallbacks::new());
+        Engine {
+            parser: RefCell::new(parser),
+            cols,
+            rows,
+        }
     }
 
     pub fn feed(&mut self, bytes: &[u8]) {
@@ -204,7 +212,10 @@ impl Engine {
         self.cols = cols.max(1);
         self.rows = rows.max(1);
         // vt100 Screen::set_size 는 (rows, cols) 순서.
-        self.parser.get_mut().screen_mut().set_size(self.rows, self.cols);
+        self.parser
+            .get_mut()
+            .screen_mut()
+            .set_size(self.rows, self.cols);
     }
 
     pub fn cols(&self) -> u16 {
@@ -246,7 +257,10 @@ impl Engine {
             bracketed_paste: screen.bracketed_paste(),
             app_cursor: screen.application_cursor(),
             app_keypad: screen.application_keypad(),
-            mouse_click: matches!(mouse, MouseProtocolMode::Press | MouseProtocolMode::PressRelease),
+            mouse_click: matches!(
+                mouse,
+                MouseProtocolMode::Press | MouseProtocolMode::PressRelease
+            ),
             mouse_drag: matches!(mouse, MouseProtocolMode::ButtonMotion),
             mouse_motion: matches!(mouse, MouseProtocolMode::AnyMotion),
             sgr_mouse: matches!(enc, MouseProtocolEncoding::Sgr),
@@ -308,7 +322,10 @@ fn materialize_row(screen: &VtScreen, view_row: u16, cols: u16) -> Vec<GridCell>
 fn cell_of(cell: &vt100::Cell) -> GridCell {
     // wide 연속 칸은 본체 뒤의 점유 스페이서다 — 문자를 담지 않는다.
     if cell.is_wide_continuation() {
-        return GridCell { spacer: true, ..blank_cell() };
+        return GridCell {
+            spacer: true,
+            ..blank_cell()
+        };
     }
     let mut chars = cell.contents().chars();
     let ch = chars.next().unwrap_or(' ');
@@ -351,6 +368,20 @@ fn snap_color(color: Color) -> ColorSnap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use soksak_kit_sidecar_terminal::mirror::TerminalEngine;
+
+    #[test]
+    fn row_only_resize_replays_the_visible_screen() {
+        let mut engine = Engine::new(80, 40);
+        engine.feed(b"ROW-RESIZE-MARKER");
+        TerminalEngine::resize_with_replay(&mut engine, 80, 24, b"\x1b[0mROW-RESIZE-MARKER");
+        let text: String = engine
+            .line_cells(0)
+            .into_iter()
+            .map(|cell| cell.ch)
+            .collect();
+        assert!(text.contains("ROW-RESIZE-MARKER"));
+    }
 
     // vt100 은 질의에 응답 바이트를 만들지 않는다 — DA/DSR/OSC 질의는 unhandled 로 흘러
     // 계수만 된다. 각 질의를 신선한 엔진에 먹여 계수가 오르는지 곧바로 단언한다.
