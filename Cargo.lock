@@ -337,7 +337,7 @@ dependencies = [
 
 [[package]]
 name = "soksak-sidecar-terminal-vt100"
-version = "0.0.1"
+version = "0.0.4"
 dependencies = [
  "base64",
  "getrandom 0.3.4",
