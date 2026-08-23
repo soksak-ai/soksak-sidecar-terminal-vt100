@@ -170,7 +170,7 @@ impl Callbacks for VtCallbacks {
 
     fn unhandled_osc(&mut self, _: &mut VtScreen, params: &[&[u8]]) {
         // 색·클립보드 질의는 마지막 파라미터가 `?` 다(예: `OSC 11 ; ? BEL`).
-        if params.last().map_or(false, |p| *p == b"?") {
+        if params.last().is_some_and(|p| *p == b"?") {
             self.suppressed += 1;
         }
     }
@@ -311,10 +311,10 @@ fn materialize_row(screen: &VtScreen, view_row: u16, cols: u16) -> Vec<GridCell>
             None => blank_cell(),
         });
     }
-    if screen.row_wrapped(view_row) {
-        if let Some(last) = out.last_mut() {
-            last.wrapline = true;
-        }
+    if screen.row_wrapped(view_row)
+        && let Some(last) = out.last_mut()
+    {
+        last.wrapline = true;
     }
     out
 }
