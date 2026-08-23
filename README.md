@@ -10,7 +10,7 @@ engine, exactly as `[redacted]` carries Chromium).
 
 The normative wire (server face, consumer/daemon peering, checkpoint policy, failure
 semantics, acceptance) is owned by **one** repo, and it is not this one:
-`soksak-contract-terminal` (`~/.soksak-dev/contracts/soksak-contract-terminal`). It owns
+`soksak-contract-terminal`. It owns
 `SPEC.md`, the corpus, the declared reference states, and the assertions this unit is graded by.
 This unit implements that contract; it does not restate it.
 
@@ -45,8 +45,8 @@ contract's canonical two-cell layout.
 ## The gate
 
 **This unit passes when `scripts/gate.sh` passes, and by no other means.** One command, all of
-it blocking: the seven fixtures against the contract's declared reference states, the unit tests, the
-real-daemon integration, and the performance budgets (SPEC.md §14.2). The benchmark is ignored
+it blocking: the seven fixtures against the contract's declared reference states, the unit tests, and
+the performance budgets (SPEC.md §14.2). The benchmark is ignored
 in the ordinary test run — it would slow the development loop — so the gate is what makes the
 budget binding rather than decorative. The contract repo's own `scripts/gate.sh` runs this one
 alongside the other units and adds the guard that only shows when they stand side by side.
@@ -56,37 +56,15 @@ alongside the other units and adds the guard that only shows when they stand sid
 The contract's acceptance suite belongs to the kit, not to this repo. The seven engine-neutral
 restore fixtures live in `soksak-kit-terminal-conformance`, and this unit stands its mirror up
 against them in one line (`tests/conformance.rs`). GREEN on that shared suite is the unit's
-gate — and with no copy here, there is nothing to drift. Real-daemon integration
-(`tests/ptyd_integration.rs`, driven by `scripts/e2e/ptyd-integration.sh`) exercises the
-tee→mirror→checkpoint round trip against an isolated `soksak-ptyd` binary.
+gate — and with no copy here, there is nothing to drift. Installed PTY and recovery-sidecar
+composition belongs to the terminal acceptance repository, which installs both products through
+Core and verifies warm and archived restore across every terminal plugin.
 
 ## Qualification verdict
 
-### Qualification baseline — DEC Special Graphics
-
-Conformance result against `soksak-spec-sidecar-terminal`: **6 of 7 fixtures pass**.
-
-Fixture ⑦ `dec_line_drawing_box_restores_glyphs` was **RED**. The qualification baseline
-did not implement the DEC Special Graphics character set — it ignored
-`ESC ( 0` and treats SI/SO as no-ops — so a line-drawing TUI border was mirrored as
-literal ASCII (`lqk`) instead of box glyphs (`┌─┐`), and the restored screen diverged
-from the declared reference state. This was an engine-seat capability gap, not a defect in the restore
-domain logic (fixtures ①–⑥ all pass).
-The unit was not eligible for release, and the `dec_line_drawing` fixture
-stayed active (RED, not `#[ignore]`) as the honest 6/7 record.
-
-### Qualified behavior — DEC Special Graphics
-
-The engine revision declared in `Cargo.toml` implements DEC Special Graphics support:
-`ESC ( <final>` / `ESC )
-<final>` designation, SO/SI to invoke a G-set, glyph translation on print, DECSC/DECRC
-of the charset state, and persistence across the alternate screen. With the fixture and restore logic unchanged,
-fixture ⑦ turns RED→GREEN and the unchanged seven-fixture suite passes 7 of 7. The lib unit tests,
-`service_down`, and the real-ptyd integration remain GREEN, and the fixtures pass 20/20
-repeats without flaking.
-
-Release input is the immutable dependency URL and revision declared in `Cargo.toml`;
-no local path dependency participates in the build.
+The owner pins `soksak-ai/vt100-rust` commit
+`01778784e11f9e073d24559c792546ba40ac20ad`. That engine includes DEC Special
+Graphics support, and the unchanged seven-fixture conformance suite passes 7 of 7.
 
 ## Licensing is per-unit
 
