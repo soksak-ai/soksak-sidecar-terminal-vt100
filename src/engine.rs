@@ -53,6 +53,7 @@ fn blank_cell() -> GridCell {
         spacer: false,
         wrapline: false,
         zerowidth: Vec::new(),
+        link: None,
     }
 }
 
@@ -94,6 +95,9 @@ impl TerminalEngine for Engine {
     }
     fn line_cells(&self, line: i32) -> Vec<GridCell> {
         Engine::line_cells(self, line)
+    }
+    fn viewport_cells(&self, offset: usize) -> Vec<Vec<GridCell>> {
+        Engine::viewport_cells(self, offset)
     }
     fn suppressed_replies(&self) -> u64 {
         Engine::suppressed_replies(self)
@@ -299,6 +303,23 @@ impl Engine {
         screen.set_scrollback(0);
         out
     }
+
+    /// The viewport `offset` rows into history in one pass: the scrollback view is shifted once,
+    /// `rows` consecutive rows are read at positions 0..rows, and the view is put back. The
+    /// engine clamps the shift to its scrollback length; the caller already clamped to
+    /// `history_size`.
+    pub fn viewport_cells(&self, offset: usize) -> Vec<Vec<GridCell>> {
+        let (cols, rows) = (self.cols, self.rows);
+        let mut parser = self.parser.borrow_mut();
+        let screen = parser.screen_mut();
+        screen.set_scrollback(offset);
+        let mut out = Vec::with_capacity(rows as usize);
+        for row in 0..rows {
+            out.push(materialize_row(screen, row, cols));
+        }
+        screen.set_scrollback(0);
+        out
+    }
 }
 
 // 한 뷰 행(현재 오프셋 기준 위치 view_row)을 계약 정규형과 동형인 GridCell 벡터(길이 = cols)로
@@ -346,6 +367,8 @@ fn cell_of(cell: &vt100::Cell) -> GridCell {
         spacer: false,
         wrapline: false,
         zerowidth,
+        // vt100 does not track OSC 8; capabilities.hyperlinks stays false.
+        link: None,
     }
 }
 
@@ -408,5 +431,37 @@ mod tests {
         assert!(!m.alternate_scroll, "alt-scroll(1007) cleared");
         assert!(!m.line_wrap, "auto-wrap(7) cleared");
         assert!(m.insert, "insert(4) set");
+    }
+
+    #[test]
+    fn viewport_at_offset_reads_scrollback_then_screen() {
+        let mut e = Engine::new(4, 2);
+        e.feed(b"1\r\n2\r\n3\r\n4");
+        let text = |cells: &Vec<GridCell>| {
+            cells
+                .iter()
+                .map(|c| c.ch)
+                .collect::<String>()
+                .trim_end()
+                .to_string()
+        };
+        assert_eq!(e.history_size(), 2);
+        let bottom = e.viewport_cells(0);
+        assert_eq!(
+            (text(&bottom[0]).as_str(), text(&bottom[1]).as_str()),
+            ("3", "4")
+        );
+        let one = e.viewport_cells(1);
+        assert_eq!((text(&one[0]).as_str(), text(&one[1]).as_str()), ("2", "3"));
+        let two = e.viewport_cells(2);
+        assert_eq!((text(&two[0]).as_str(), text(&two[1]).as_str()), ("1", "2"));
+        assert_eq!(two[0], e.line_cells(-2));
+        assert_eq!(one[1], e.line_cells(0));
+        assert_eq!(
+            e.viewport_cells(9)[0],
+            e.line_cells(-2),
+            "the engine clamps the shift"
+        );
+        assert_eq!(e.history_size(), 2, "reads leave the view at the bottom");
     }
 }

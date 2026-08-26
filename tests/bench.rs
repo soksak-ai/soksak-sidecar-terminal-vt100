@@ -9,6 +9,11 @@ static ALLOC: soksak_contract_terminal::bench::CountingAlloc =
 
 mod common;
 
+use std::time::{Duration, Instant};
+
+use soksak_contract_terminal::Fixture;
+use soksak_sidecar_terminal_vt100::Mirror;
+
 #[test]
 #[ignore]
 fn bench() {
@@ -26,4 +31,30 @@ fn bench() {
     // 예산은 게이트다(SPEC.md §14.2) — 어기면 여기서 떨어진다. 후보끼리 견주지 않는다:
     // 이 유닛이 잰 수요와 이 유닛의 성적만 본다.
     soksak_contract_terminal::bench::assert_within_budget(&report);
+}
+
+// frame 예산 — 80×24 의 무거운 화면(트루컬러 wide 행, 1000행 스크롤백)에서 frame_at(0) 의 3회
+// 중앙값이 2 ms 이하. release 게이트다: debug 빌드는 측정이 아니라 건너뛴다.
+#[test]
+fn frame_at_zero_is_within_two_milliseconds() {
+    if cfg!(debug_assertions) {
+        eprintln!("frame budget is a release-build gate; skipped in debug");
+        return;
+    }
+    let mut mirror = Mirror::new(80, 24);
+    mirror.feed(&Fixture::PrivateModes.stream());
+    let mut samples: Vec<Duration> = (0..3)
+        .map(|_| {
+            let started = Instant::now();
+            let frame = mirror.frame_at(0);
+            std::hint::black_box(frame);
+            started.elapsed()
+        })
+        .collect();
+    samples.sort();
+    assert!(
+        samples[1] <= Duration::from_millis(2),
+        "frame_at(0) median {:?} exceeds the 2 ms budget (samples {samples:?})",
+        samples[1]
+    );
 }
