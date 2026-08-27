@@ -59,6 +59,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cc"
+version = "1.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ad534f4357a5264cce5019c989cf66a4f0dc4e0d1b1d15f8aacec0ff7360273"
+dependencies = [
+ "find-msvc-tools",
+ "shlex",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -118,6 +128,12 @@ name = "doctest-file"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2db04e74f0a9a93103b50e90b96024c9b2bdca8bce6a632ec71b88736d3d359"
+
+[[package]]
+name = "find-msvc-tools"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d45db016d36b838f563236e9193d0ee6ce38f3f68b6c94e914b4929c96bbb890"
 
 [[package]]
 name = "generic-array"
@@ -314,12 +330,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "shlex"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+
+[[package]]
 name = "soksak-contract-control"
 version = "0.0.2"
 source = "git+https://github.com/soksak-ai/soksak-contract-control?rev=6d1a1c8cbad7fa131bb4aef94a730fa6d18dbaff#6d1a1c8cbad7fa131bb4aef94a730fa6d18dbaff"
 dependencies = [
  "sha2",
 ]
+
+[[package]]
+name = "soksak-contract-surface"
+version = "0.0.2"
+source = "git+https://github.com/soksak-ai/soksak-contract-surface?rev=b095b92660ff617c345f9a7eb2b8ab4ce9986cd5#b095b92660ff617c345f9a7eb2b8ab4ce9986cd5"
 
 [[package]]
 name = "soksak-contract-terminal"
@@ -333,21 +360,23 @@ dependencies = [
 [[package]]
 name = "soksak-kit-sidecar-terminal"
 version = "0.0.14"
-source = "git+https://github.com/soksak-ai/soksak-kit-sidecar-terminal?rev=eec93c31c2416e8f92025e01b965b7d2d87c4e5a#eec93c31c2416e8f92025e01b965b7d2d87c4e5a"
+source = "git+https://github.com/soksak-ai/soksak-kit-sidecar-terminal?rev=1b82406cd297b515c389164e9d1e757757a66c38#1b82406cd297b515c389164e9d1e757757a66c38"
 dependencies = [
  "aes-gcm",
  "base64",
+ "cc",
  "getrandom 0.3.4",
  "interprocess",
  "serde",
  "serde_json",
  "sha2",
  "soksak-contract-control",
+ "soksak-contract-surface",
 ]
 
 [[package]]
 name = "soksak-sidecar-terminal-vt100"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "base64",
  "getrandom 0.3.4",

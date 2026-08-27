@@ -30,6 +30,18 @@ impl soksak_kit_sidecar_terminal::TerminalStateMirror for Mirror {
     fn frame_at(&self, offset: usize) -> soksak_kit_sidecar_terminal::mirror::TerminalFrame {
         Mirror::frame_at(self, offset)
     }
+    fn cols(&self) -> u16 {
+        Mirror::cols(self)
+    }
+    fn rows(&self) -> u16 {
+        Mirror::rows(self)
+    }
+    fn cursor(&self) -> (usize, usize) {
+        Mirror::cursor(self)
+    }
+    fn line_cells(&self, line: i32) -> Vec<soksak_kit_sidecar_terminal::mirror::TerminalCell> {
+        Mirror::line_cells(self, line)
+    }
     fn history_size(&self) -> usize {
         Mirror::history_size(self)
     }
