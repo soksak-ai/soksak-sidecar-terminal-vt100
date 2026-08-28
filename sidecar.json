@@ -1,6 +1,6 @@
 {
   "id": "soksak-sidecar-terminal-vt100",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "processRole": "sidecar-terminal-vt100",
   "interface": [
     {
