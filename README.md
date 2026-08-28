@@ -44,6 +44,14 @@ contract's canonical two-cell layout.
 
 ## The gate
 
+```sh
+make lock TARGET=aarch64-apple-darwin
+make verify TARGET=aarch64-apple-darwin
+```
+
+`make lock` is the only owner operation that projects changed Cargo declarations into
+`Cargo.lock`. Normal build and verification remain `--locked`.
+
 **This unit passes when `scripts/gate.sh` passes, and by no other means.** One command, all of
 it blocking: the seven fixtures against the contract's declared reference states, the unit tests, and
 the performance budgets (SPEC.md §14.2). The benchmark is ignored
