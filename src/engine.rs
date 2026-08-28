@@ -397,6 +397,29 @@ fn cell_of(cell: &vt100::Cell) -> GridCell {
     }
 }
 
+#[cfg(test)]
+mod theme_tests {
+    use super::*;
+    use soksak_kit_sidecar_terminal::mirror::TerminalRgb;
+
+    #[test]
+    fn engine_exposes_raw_osc_color_overrides() {
+        let mut engine = Engine::new(4, 2);
+        engine.feed(
+            b"\x1b]4;1;#123456\x07\x1b]10;#abcdef\x07\x1b]11;#223344\x07\x1b]12;#654321\x07",
+        );
+        let colors = TerminalEngine::theme_overrides(&engine);
+        assert_eq!(colors.ansi[1], Some(TerminalRgb { r: 0x12, g: 0x34, b: 0x56 }));
+        assert_eq!(colors.foreground, Some(TerminalRgb { r: 0xab, g: 0xcd, b: 0xef }));
+        assert_eq!(colors.background, Some(TerminalRgb { r: 0x22, g: 0x33, b: 0x44 }));
+        assert_eq!(colors.cursor, Some(TerminalRgb { r: 0x65, g: 0x43, b: 0x21 }));
+        engine.feed(b"\x1b]104;1\x07\x1b]110\x07\x1b]111\x07\x1b]112\x07");
+        let reset = TerminalEngine::theme_overrides(&engine);
+        assert_eq!(reset.ansi[1], None);
+        assert_eq!((reset.foreground, reset.background, reset.cursor), (None, None, None));
+    }
+}
+
 // vt100 Color → 엔진-중립 ColorSnap. 팔레트 0..16 은 Named(기본/브라이트 SGR 로 왕복),
 // 16..256 은 Indexed(38;5;N), truecolor 는 Rgb(판정자 계약의 팔레트/트루컬러 정규화와 동형).
 fn snap_color(color: Color) -> ColorSnap {
