@@ -8,6 +8,7 @@ preflight: require-target
 prepare: preflight
 	@cargo fetch --locked --target '$(TARGET)'
 build: prepare
+	@node scripts/check-cursor-contract.mjs
 	@cargo build --locked --release --target '$(TARGET)' --bin soksak-sidecar-terminal-vt100
 stage: build
 	@scripts/stage-built.sh '$(OUT)' '$(TARGET)'
