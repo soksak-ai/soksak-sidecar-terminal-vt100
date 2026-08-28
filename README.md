@@ -47,6 +47,8 @@ contract's canonical two-cell layout.
 ```sh
 make lock TARGET=aarch64-apple-darwin
 make verify TARGET=aarch64-apple-darwin
+make stage TARGET=aarch64-apple-darwin STAGE=dist
+make attest TARGET=aarch64-apple-darwin OUT=/absolute/vt100-release
 ```
 
 `make lock` is the only owner operation that projects changed Cargo declarations into
