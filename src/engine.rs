@@ -27,10 +27,12 @@ use std::cell::RefCell;
 
 use soksak_kit_sidecar_terminal::mirror::TerminalEngine;
 pub use soksak_kit_sidecar_terminal::mirror::{
-    TerminalCell as GridCell, TerminalColor as ColorSnap, TerminalModes as ModeSnap,
+    TerminalCell as GridCell, TerminalColor as ColorSnap, TerminalCursorAnimation,
+    TerminalCursorShape, TerminalCursorStyle, TerminalModes as ModeSnap,
 };
 use vt100::{
-    Callbacks, Color, MouseProtocolEncoding, MouseProtocolMode, Parser, Screen as VtScreen,
+    Callbacks, Color, CursorShape as VtCursorShape, MouseProtocolEncoding, MouseProtocolMode,
+    Parser, Screen as VtScreen,
 };
 
 /// 엔진이 유지하는 스크롤백 행 수. 바이트 충실 복원의 바닥 — 전체 의미 이력은
@@ -83,6 +85,12 @@ impl TerminalEngine for Engine {
     }
     fn cursor(&self) -> (usize, usize) {
         Engine::cursor(self)
+    }
+    fn cursor_style(&self) -> TerminalCursorStyle {
+        Engine::cursor_style(self)
+    }
+    fn cursor_animation(&self) -> TerminalCursorAnimation {
+        Engine::cursor_animation(self)
     }
     fn alt_active(&self) -> bool {
         Engine::alt_active(self)
@@ -238,6 +246,23 @@ impl Engine {
     pub fn cursor(&self) -> (usize, usize) {
         let (row, col) = self.parser.borrow().screen().cursor_position();
         (row as usize, col as usize)
+    }
+
+    pub fn cursor_style(&self) -> TerminalCursorStyle {
+        let style = self.parser.borrow().screen().cursor_style();
+        let shape = match style.shape {
+            VtCursorShape::Block => TerminalCursorShape::Block,
+            VtCursorShape::Underline => TerminalCursorShape::Underline,
+            VtCursorShape::Bar => TerminalCursorShape::Bar,
+        };
+        TerminalCursorStyle {
+            shape,
+            blinking: style.blinking,
+        }
+    }
+
+    pub fn cursor_animation(&self) -> TerminalCursorAnimation {
+        TerminalCursorAnimation { interval_ms: 500 }
     }
 
     /// 현재 스크롤백(화면 위로 밀려난) 행 수. vt100 은 히스토리 크기를 직접 노출하지 않으므로

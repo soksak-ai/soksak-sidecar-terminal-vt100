@@ -443,7 +443,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vt100"
 version = "0.16.2"
-source = "git+https://github.com/soksak-ai/vt100-rust.git?rev=01778784e11f9e073d24559c792546ba40ac20ad#01778784e11f9e073d24559c792546ba40ac20ad"
+source = "git+https://github.com/min-median-max/vt100-rust.git?rev=0807d4e8d94613510a7bd8a6b667b462b31b7f67#0807d4e8d94613510a7bd8a6b667b462b31b7f67"
 dependencies = [
  "itoa",
  "unicode-width",

@@ -30,7 +30,7 @@ path = "src/main.rs"
 # attribution ships in THIRD-PARTY-NOTICES.
 #
 # Immutable engine revision providing the DEC Special Graphics behavior required by the qualification fixture.
-vt100 = { git = "https://github.com/soksak-ai/vt100-rust.git", rev = "01778784e11f9e073d24559c792546ba40ac20ad" }
+vt100 = { git = "https://github.com/min-median-max/vt100-rust.git", rev = "0807d4e8d94613510a7bd8a6b667b462b31b7f67" }
 # Wire — the daemon speaks NDJSON + base64 payloads; this unit reimplements the
 # documented shape (proto module) rather than linking the core crate.
 serde_json = "1"
