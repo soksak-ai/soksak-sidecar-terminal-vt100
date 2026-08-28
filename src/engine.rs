@@ -28,7 +28,8 @@ use std::cell::RefCell;
 use soksak_kit_sidecar_terminal::mirror::TerminalEngine;
 pub use soksak_kit_sidecar_terminal::mirror::{
     TerminalCell as GridCell, TerminalColor as ColorSnap, TerminalCursorAnimation,
-    TerminalCursorShape, TerminalCursorStyle, TerminalModes as ModeSnap,
+    TerminalCursorShape, TerminalCursorStyle, TerminalModes as ModeSnap, TerminalRgb,
+    TerminalThemeOverrides,
 };
 use vt100::{
     Callbacks, Color, CursorShape as VtCursorShape, MouseProtocolEncoding, MouseProtocolMode,
@@ -91,6 +92,9 @@ impl TerminalEngine for Engine {
     }
     fn cursor_animation(&self) -> TerminalCursorAnimation {
         Engine::cursor_animation(self)
+    }
+    fn theme_overrides(&self) -> TerminalThemeOverrides {
+        Engine::theme_overrides(self)
     }
     fn alt_active(&self) -> bool {
         Engine::alt_active(self)
@@ -265,6 +269,20 @@ impl Engine {
         TerminalCursorAnimation { interval_ms: 500 }
     }
 
+    pub fn theme_overrides(&self) -> TerminalThemeOverrides {
+        let parser = self.parser.borrow();
+        let source = parser.screen().theme_overrides();
+        let rgb = |color: vt100::RgbColor| TerminalRgb { r: color.r, g: color.g, b: color.b };
+        let mut overrides = TerminalThemeOverrides::default();
+        overrides.foreground = source.foreground.map(rgb);
+        overrides.background = source.background.map(rgb);
+        overrides.cursor = source.cursor.map(rgb);
+        for (index, slot) in overrides.ansi.iter_mut().enumerate() {
+            *slot = source.ansi[index].map(rgb);
+        }
+        overrides
+    }
+
     /// 현재 스크롤백(화면 위로 밀려난) 행 수. vt100 은 히스토리 크기를 직접 노출하지 않으므로
     /// 오프셋을 최대로 밀면 clamp 된 값이 실제 스크롤백 행 수다. 읽고 나서 0 으로 되돌린다.
     pub fn history_size(&self) -> usize {
@@ -400,7 +418,6 @@ fn cell_of(cell: &vt100::Cell) -> GridCell {
 #[cfg(test)]
 mod theme_tests {
     use super::*;
-    use soksak_kit_sidecar_terminal::mirror::TerminalRgb;
 
     #[test]
     fn engine_exposes_raw_osc_color_overrides() {
