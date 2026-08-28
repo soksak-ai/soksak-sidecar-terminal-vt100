@@ -30,7 +30,7 @@ path = "src/main.rs"
 # attribution ships in THIRD-PARTY-NOTICES.
 #
 # Immutable engine revision providing the DEC Special Graphics behavior required by the qualification fixture.
-vt100 = { git = "https://github.com/min-median-max/vt100-rust.git", rev = "0807d4e8d94613510a7bd8a6b667b462b31b7f67" }
+vt100 = { git = "https://github.com/min-median-max/vt100-rust.git", rev = "70cd8080c963a913f15a708f97b87e4b5f95c148" }
 # Wire — the daemon speaks NDJSON + base64 payloads; this unit reimplements the
 # documented shape (proto module) rather than linking the core crate.
 serde_json = "1"
@@ -41,7 +41,7 @@ base64 = "0.22"
 # own, so the NDJSON + length-prefixed tee protocol is byte-for-byte unchanged.
 interprocess = "2"
 getrandom = "=0.3.4"
-soksak-kit-sidecar-terminal = { git = "https://github.com/soksak-ai/soksak-kit-sidecar-terminal", rev = "3994230dfe7ba7c78be491efe595bb7102a0d6f2", features = ["integration-tests"] }
+soksak-kit-sidecar-terminal = { git = "https://github.com/soksak-ai/soksak-kit-sidecar-terminal", rev = "a83a8333d4f72fff00bc318541013b7449661299", features = ["integration-tests"] }
 
 # Redirect the survival service's own stderr to a home log so checkpoint failures are
 # visible (the plugin spawns it over a stdio Channel that drops stderr). The redirect is
