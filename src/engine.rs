@@ -27,13 +27,16 @@ use std::cell::RefCell;
 
 use soksak_kit_sidecar_terminal::mirror::TerminalEngine;
 pub use soksak_kit_sidecar_terminal::mirror::{
+    EnginePointerInput, EngineSelectionPoint, EngineWheelInput, SelectionKind, SelectionModifiers,
     TerminalCell as GridCell, TerminalColor as ColorSnap, TerminalCursorAnimation,
     TerminalCursorShape, TerminalCursorStyle, TerminalModes as ModeSnap, TerminalRgb,
     TerminalThemeOverrides,
 };
 use vt100::{
-    Callbacks, Color, CursorShape as VtCursorShape, MouseProtocolEncoding, MouseProtocolMode,
-    Parser, Screen as VtScreen,
+    Callbacks, Color, CursorShape as VtCursorShape, MouseButton as VtMouseButton,
+    MouseEvent as VtMouseEvent, MouseEventKind as VtMouseEventKind,
+    MouseModifiers as VtMouseModifiers, MouseProtocolEncoding, MouseProtocolMode, Parser,
+    Screen as VtScreen,
 };
 
 /// 엔진이 유지하는 스크롤백 행 수. 바이트 충실 복원의 바닥 — 전체 의미 이력은
@@ -113,6 +116,34 @@ impl TerminalEngine for Engine {
     }
     fn suppressed_replies(&self) -> u64 {
         Engine::suppressed_replies(self)
+    }
+    fn selection_begin(
+        &mut self,
+        _kind: SelectionKind,
+        _point: EngineSelectionPoint,
+        _modifiers: SelectionModifiers,
+    ) -> Result<(), String> {
+        Err("VT100 selection input is not implemented".into())
+    }
+    fn selection_update(
+        &mut self,
+        _point: EngineSelectionPoint,
+        _modifiers: SelectionModifiers,
+    ) -> Result<(), String> {
+        Err("VT100 selection input is not implemented".into())
+    }
+    fn selection_clear(&mut self) {}
+    fn selection_text(&self) -> Option<String> {
+        None
+    }
+    fn selection_range(&self, _line: i32) -> Option<(u16, u16)> {
+        None
+    }
+    fn wheel_input(&mut self, _input: EngineWheelInput) -> Result<Vec<u8>, String> {
+        Err("VT100 wheel input is not implemented".into())
+    }
+    fn pointer_input(&mut self, input: EnginePointerInput) -> Result<Vec<u8>, String> {
+        Engine::pointer_input(self, input)
     }
 }
 
@@ -318,6 +349,36 @@ impl Engine {
             line_wrap: cb.line_wrap,
             insert: cb.insert,
         }
+    }
+
+    pub fn pointer_input(&mut self, input: EnginePointerInput) -> Result<Vec<u8>, String> {
+        let kind = match input.phase {
+            soksak_kit_sidecar_terminal::mirror::PointerPhase::Down => VtMouseEventKind::Press,
+            soksak_kit_sidecar_terminal::mirror::PointerPhase::Up => VtMouseEventKind::Release,
+            soksak_kit_sidecar_terminal::mirror::PointerPhase::Move => VtMouseEventKind::Motion,
+        };
+        let button = match input.button {
+            soksak_kit_sidecar_terminal::mirror::PointerButton::None => VtMouseButton::None,
+            soksak_kit_sidecar_terminal::mirror::PointerButton::Left => VtMouseButton::Left,
+            soksak_kit_sidecar_terminal::mirror::PointerButton::Middle => VtMouseButton::Middle,
+            soksak_kit_sidecar_terminal::mirror::PointerButton::Right => VtMouseButton::Right,
+        };
+        self.parser
+            .borrow()
+            .screen()
+            .encode_mouse_event(VtMouseEvent {
+                row: input.row,
+                column: input.col,
+                kind,
+                button,
+                modifiers: VtMouseModifiers {
+                    shift: input.modifiers.shift,
+                    alt: input.modifiers.alt,
+                    control: input.modifiers.control,
+                    meta: input.modifiers.meta,
+                },
+            })
+            .map_err(|error| format!("VT100 mouse encoder failed: {error:?}"))
     }
 
     /// 미러가 관찰한, 삼킨 응답 요구 수(DA1/DSR/OSC 질의). vt100 은 응답을 절대 만들지
