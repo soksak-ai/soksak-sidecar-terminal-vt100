@@ -346,8 +346,8 @@ dependencies = [
 
 [[package]]
 name = "soksak-contract-surface"
-version = "0.0.8"
-source = "git+https://github.com/soksak-ai/soksak-contract-surface?rev=4bcf917cd104713bf934ee89afb81799466d2f3f#4bcf917cd104713bf934ee89afb81799466d2f3f"
+version = "0.0.9"
+source = "git+https://github.com/soksak-ai/soksak-contract-surface?rev=f3c3b22#f3c3b22f780850cb222e5eeb862eff59518766eb"
 dependencies = [
  "base64",
  "serde",
@@ -365,8 +365,8 @@ dependencies = [
 
 [[package]]
 name = "soksak-kit-sidecar-terminal"
-version = "0.0.31"
-source = "git+https://github.com/soksak-ai/soksak-kit-sidecar-terminal?rev=e840d6e942b4e9d07f6d78a0835ad9d256c7317b#e840d6e942b4e9d07f6d78a0835ad9d256c7317b"
+version = "0.0.34"
+source = "git+https://github.com/soksak-ai/soksak-kit-sidecar-terminal?rev=20fb2d73d13e5bcde592380d3052c5d2204a592f#20fb2d73d13e5bcde592380d3052c5d2204a592f"
 dependencies = [
  "aes-gcm",
  "base64",
@@ -449,7 +449,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vt100"
 version = "0.16.2"
-source = "git+https://github.com/min-median-max/vt100-rust.git?rev=d557ec12724bfb85dd4d2f48146831b7f8ff2dfd#d557ec12724bfb85dd4d2f48146831b7f8ff2dfd"
+source = "git+https://github.com/min-median-max/vt100-rust.git?rev=5580fbb6dd389d18afbbd430fe3942867b02ae12#5580fbb6dd389d18afbbd430fe3942867b02ae12"
 dependencies = [
  "itoa",
  "unicode-width",

@@ -132,7 +132,9 @@ impl TerminalEngine for Engine {
     ) -> Result<(), String> {
         Engine::selection_update(self, point, modifiers)
     }
-    fn selection_clear(&mut self) { Engine::selection_clear(self) }
+    fn selection_clear(&mut self) {
+        Engine::selection_clear(self)
+    }
     fn selection_text(&self) -> Option<String> {
         Engine::selection_text(self)
     }
@@ -312,7 +314,11 @@ impl Engine {
     pub fn theme_overrides(&self) -> TerminalThemeOverrides {
         let parser = self.parser.borrow();
         let source = parser.screen().theme_overrides();
-        let rgb = |color: vt100::RgbColor| TerminalRgb { r: color.r, g: color.g, b: color.b };
+        let rgb = |color: vt100::RgbColor| TerminalRgb {
+            r: color.r,
+            g: color.g,
+            b: color.b,
+        };
         let mut overrides = TerminalThemeOverrides::default();
         overrides.foreground = source.foreground.map(rgb);
         overrides.background = source.background.map(rgb);
@@ -344,10 +350,9 @@ impl Engine {
             bracketed_paste: screen.bracketed_paste(),
             app_cursor: screen.application_cursor(),
             app_keypad: screen.application_keypad(),
-            mouse_click: matches!(
-                mouse,
-                MouseProtocolMode::Press | MouseProtocolMode::PressRelease
-            ),
+            mouse_x10: matches!(mouse, MouseProtocolMode::X10),
+            mouse_click: matches!(mouse, MouseProtocolMode::PressRelease),
+            mouse_highlight: matches!(mouse, MouseProtocolMode::Highlight),
             mouse_drag: matches!(mouse, MouseProtocolMode::ButtonMotion),
             mouse_motion: matches!(mouse, MouseProtocolMode::AnyMotion),
             sgr_mouse: matches!(enc, MouseProtocolEncoding::Sgr),
@@ -363,7 +368,9 @@ impl Engine {
     fn selection_boundary(point: EngineSelectionPoint) -> (i32, u16) {
         (
             point.line,
-            point.col.saturating_add(u16::from(point.side == CellSide::Right)),
+            point
+                .col
+                .saturating_add(u16::from(point.side == CellSide::Right)),
         )
     }
 
@@ -392,7 +399,11 @@ impl Engine {
                 return Ok(());
             }
         }
-        self.selection = Some(EngineSelection { kind, anchor: point, focus: point });
+        self.selection = Some(EngineSelection {
+            kind,
+            anchor: point,
+            focus: point,
+        });
         Ok(())
     }
 
@@ -461,10 +472,11 @@ impl Engine {
     /// event API has no wheel buttons, so the adapter applies the xterm wheel button codes to that
     /// public state instead of guessing from provider identity or duplicating routing in Core.
     pub fn wheel_input(&mut self, input: EngineWheelInput) -> Result<Vec<u8>, String> {
+        let modes = self.modes();
+        let mouse_reporting = modes.mouse_reporting();
         match input.route {
             EngineWheelRoute::AlternateScroll => {
-                let modes = self.modes();
-                if !self.alt_active() || !modes.alternate_scroll {
+                if !self.alt_active() || !modes.alternate_scroll || mouse_reporting {
                     return Err("WHEEL_MODE_CHANGED: alternate scroll is not active".into());
                 }
                 let mut bytes = Vec::new();
@@ -479,17 +491,18 @@ impl Engine {
                 Ok(bytes)
             }
             EngineWheelRoute::MouseReport => {
-                let parser = self.parser.borrow();
-                let screen = parser.screen();
-                if screen.mouse_protocol_mode() == MouseProtocolMode::None {
+                if !mouse_reporting {
                     return Err("WHEEL_MODE_CHANGED: mouse reporting is not active".into());
                 }
+                let parser = self.parser.borrow();
+                let screen = parser.screen();
                 let encoding = screen.mouse_protocol_encoding();
                 let mut bytes = Vec::new();
                 let vertical = if input.vertical < 0 { 64 } else { 65 };
                 for _ in 0..input.vertical.unsigned_abs() {
                     bytes.extend(encode_wheel_mouse_report(
                         encoding,
+                        modes.mouse_x10,
                         vertical,
                         input.row,
                         input.col,
@@ -500,6 +513,7 @@ impl Engine {
                 for _ in 0..input.horizontal.unsigned_abs() {
                     bytes.extend(encode_wheel_mouse_report(
                         encoding,
+                        modes.mouse_x10,
                         horizontal,
                         input.row,
                         input.col,
@@ -512,6 +526,10 @@ impl Engine {
     }
 
     pub fn pointer_input(&mut self, input: EnginePointerInput) -> Result<Vec<u8>, String> {
+        let modes = self.modes();
+        if !modes.reports_pointer(input.phase, input.button) {
+            return Err("POINTER_MODE_CHANGED: pointer reporting is not active".into());
+        }
         let kind = match input.phase {
             soksak_kit_sidecar_terminal::mirror::PointerPhase::Down => VtMouseEventKind::Press,
             soksak_kit_sidecar_terminal::mirror::PointerPhase::Up => VtMouseEventKind::Release,
@@ -590,14 +608,19 @@ impl Engine {
 /// horizontal-left/right; wheel events have no release report.
 fn encode_wheel_mouse_report(
     encoding: MouseProtocolEncoding,
+    suppress_modifiers: bool,
     button: u8,
     row: u16,
     col: u16,
     modifiers: SelectionModifiers,
 ) -> Result<Vec<u8>, String> {
-    let modifiers = u8::from(modifiers.shift) * 4
-        + u8::from(modifiers.alt || modifiers.meta) * 8
-        + u8::from(modifiers.control) * 16;
+    let modifiers = if suppress_modifiers {
+        0
+    } else {
+        u8::from(modifiers.shift) * 4
+            + u8::from(modifiers.alt || modifiers.meta) * 8
+            + u8::from(modifiers.control) * 16
+    };
     let button = button + modifiers;
     if encoding == MouseProtocolEncoding::Sgr {
         return Ok(format!(
@@ -697,18 +720,48 @@ mod theme_tests {
     #[test]
     fn engine_exposes_raw_osc_color_overrides() {
         let mut engine = Engine::new(4, 2);
-        engine.feed(
-            b"\x1b]4;1;#123456\x07\x1b]10;#abcdef\x07\x1b]11;#223344\x07\x1b]12;#654321\x07",
-        );
+        engine
+            .feed(b"\x1b]4;1;#123456\x07\x1b]10;#abcdef\x07\x1b]11;#223344\x07\x1b]12;#654321\x07");
         let colors = TerminalEngine::theme_overrides(&engine);
-        assert_eq!(colors.ansi[1], Some(TerminalRgb { r: 0x12, g: 0x34, b: 0x56 }));
-        assert_eq!(colors.foreground, Some(TerminalRgb { r: 0xab, g: 0xcd, b: 0xef }));
-        assert_eq!(colors.background, Some(TerminalRgb { r: 0x22, g: 0x33, b: 0x44 }));
-        assert_eq!(colors.cursor, Some(TerminalRgb { r: 0x65, g: 0x43, b: 0x21 }));
+        assert_eq!(
+            colors.ansi[1],
+            Some(TerminalRgb {
+                r: 0x12,
+                g: 0x34,
+                b: 0x56
+            })
+        );
+        assert_eq!(
+            colors.foreground,
+            Some(TerminalRgb {
+                r: 0xab,
+                g: 0xcd,
+                b: 0xef
+            })
+        );
+        assert_eq!(
+            colors.background,
+            Some(TerminalRgb {
+                r: 0x22,
+                g: 0x33,
+                b: 0x44
+            })
+        );
+        assert_eq!(
+            colors.cursor,
+            Some(TerminalRgb {
+                r: 0x65,
+                g: 0x43,
+                b: 0x21
+            })
+        );
         engine.feed(b"\x1b]104;1\x07\x1b]110\x07\x1b]111\x07\x1b]112\x07");
         let reset = TerminalEngine::theme_overrides(&engine);
         assert_eq!(reset.ansi[1], None);
-        assert_eq!((reset.foreground, reset.background, reset.cursor), (None, None, None));
+        assert_eq!(
+            (reset.foreground, reset.background, reset.cursor),
+            (None, None, None)
+        );
     }
 }
 
@@ -813,9 +866,14 @@ mod tests {
         TerminalEngine::selection_begin(
             &mut engine,
             SelectionKind::Simple,
-            EngineSelectionPoint { line: 0, col: 0, side: soksak_kit_sidecar_terminal::mirror::CellSide::Left },
+            EngineSelectionPoint {
+                line: 0,
+                col: 0,
+                side: soksak_kit_sidecar_terminal::mirror::CellSide::Left,
+            },
             SelectionModifiers::default(),
-        ).expect("begin selection");
+        )
+        .expect("begin selection");
         TerminalEngine::selection_update(
             &mut engine,
             EngineSelectionPoint {
@@ -824,8 +882,12 @@ mod tests {
                 side: soksak_kit_sidecar_terminal::mirror::CellSide::Left,
             },
             SelectionModifiers::default(),
-        ).expect("update selection");
-        assert_eq!(TerminalEngine::selection_text(&engine).as_deref(), Some(marker));
+        )
+        .expect("update selection");
+        assert_eq!(
+            TerminalEngine::selection_text(&engine).as_deref(),
+            Some(marker)
+        );
         assert_eq!(
             TerminalEngine::selection_range(&engine, 0),
             Some((0, u16::try_from(marker.len() - 1).unwrap())),
@@ -847,6 +909,9 @@ mod tests {
             .flatten()
             .filter(|cell| cell.ch != ' ')
             .count();
-        assert!(nonblank > 100, "shifted viewport lost printable cells: {nonblank}");
+        assert!(
+            nonblank > 100,
+            "shifted viewport lost printable cells: {nonblank}"
+        );
     }
 }
