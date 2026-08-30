@@ -5,6 +5,17 @@ documents in this directory.
 
 ## 2026-08-30
 
+### 0.0.39
+
+- Pinned vt100-rust to `5580fbb6dd389d18afbbd430fe3942867b02ae12` and the common terminal Kit
+  to final `v0.0.34` commit `20fb2d73d13e5bcde592380d3052c5d2204a592f`.
+- Exposed DEC 9 X10 and DEC 1001 highlight as distinct live facts without aliasing VT200 click,
+  drag, or any-motion tracking.
+- Routed wheel and pointer admission through the Kit's public helpers; X10 suppresses modifiers
+  and reports presses only, while highlight preserves modifiers and reports press/release.
+
+### 0.0.38
+
 - Wheel reports are encoded at the VT100 engine boundary from the live mouse mode and encoding.
 - SGR, default legacy, and UTF-8 legacy reports preserve direction, position, modifiers, and steps.
 - Alternate-screen plus alternate-scroll emits application cursor keys on both axes.

@@ -40,13 +40,17 @@ getters for bracketed-paste, application-cursor/keypad, mouse mode/encoding, and
 show-cursor; the private modes without a getter (focus tracking, alternate-scroll,
 auto-wrap, insert) are reconstructed by observing the same `unhandled_csi` stream. The
 grid stores a wide character as a body cell plus a continuation cell, aligned with the
-contract's canonical two-cell layout.
+contract's canonical two-cell layout. DEC 9 X10 and DEC 1001 highlight tracking remain distinct
+provider modes and map directly to the Kit's `mouseX10` and `mouseHighlight` facts.
 
 Wheel device units and local scrollback remain owned by the common terminal Kit. When
 the Kit selects a PTY route, this engine adapter encodes xterm wheel buttons from the
 live vt100 mouse mode/encoding, or application cursor keys when alternate-screen and
-alternate-scroll are both active. A route whose mode changed is rejected rather than
-silently reinterpreted.
+alternate-scroll are both active. Route admission uses the Kit's public `mouse_reporting` and
+`reports_pointer` rules. X10 accepts presses only and suppresses modifier bits; highlight accepts
+presses and releases, preserves modifier bits, and does not admit ordinary motion. Mouse reporting
+outranks alternate scroll, and a route whose mode changed is rejected rather than silently
+reinterpreted.
 
 ## The gate
 
@@ -79,8 +83,10 @@ Core and verifies warm and archived restore across every terminal plugin.
 ## Qualification verdict
 
 The owner pins `soksak-ai/vt100-rust` commit
-`d557ec12724bfb85dd4d2f48146831b7f8ff2dfd`. That engine includes DEC Special
-Graphics support, and the unchanged seven-fixture conformance suite passes 7 of 7.
+`5580fbb6dd389d18afbbd430fe3942867b02ae12` and the common terminal Kit's final `v0.0.34`
+commit `20fb2d73d13e5bcde592380d3052c5d2204a592f`. That engine includes DEC Special Graphics
+plus distinct DEC 9/1001 input state, and the unchanged seven-fixture conformance suite passes 7
+of 7.
 
 ## Licensing is per-unit
 

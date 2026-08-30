@@ -4,7 +4,7 @@
 
 The line-drawing contract requires DEC Special Graphics designation and invocation; the fixture and restore logic remain unchanged.
 
-This owner pins revision `01778784e11f9e073d24559c792546ba40ac20ad` declared in `Cargo.toml`. That revision implements the required charset behavior. The seven-fixture conformance suite passes 7 of 7.
+This owner pins revision `5580fbb6dd389d18afbbd430fe3942867b02ae12` declared in `Cargo.toml`. That revision implements the required charset behavior and exposes DEC 9 X10 and DEC 1001 highlight input as distinct states. The seven-fixture conformance suite passes 7 of 7.
 
 ## Frame wire v2 (0.0.14, interface 0.0.2)
 
