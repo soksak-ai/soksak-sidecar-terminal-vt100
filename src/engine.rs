@@ -721,4 +721,22 @@ mod tests {
             Some((0, u16::try_from(marker.len() - 1).unwrap())),
         );
     }
+
+    #[test]
+    fn eighty_row_burst_retains_printable_history_and_shifted_viewport() {
+        let mut engine = Engine::new(126, 30);
+        let mut bytes = Vec::new();
+        for row in 1..=80 {
+            bytes.extend_from_slice(format!("ROW{row:02}\r\n").as_bytes());
+        }
+        engine.feed(&bytes);
+        assert!(engine.history_size() >= 50);
+        let viewport = engine.viewport_cells(10);
+        let nonblank = viewport
+            .iter()
+            .flatten()
+            .filter(|cell| cell.ch != ' ')
+            .count();
+        assert!(nonblank > 100, "shifted viewport lost printable cells: {nonblank}");
+    }
 }
