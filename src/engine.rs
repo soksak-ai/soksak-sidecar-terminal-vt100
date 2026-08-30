@@ -27,10 +27,10 @@ use std::cell::RefCell;
 
 use soksak_kit_sidecar_terminal::mirror::TerminalEngine;
 pub use soksak_kit_sidecar_terminal::mirror::{
-    CellSide, EnginePointerInput, EngineSelectionPoint, EngineWheelInput, SelectionKind, SelectionModifiers,
-    TerminalCell as GridCell, TerminalColor as ColorSnap, TerminalCursorAnimation,
-    TerminalCursorShape, TerminalCursorStyle, TerminalModes as ModeSnap, TerminalRgb,
-    TerminalThemeOverrides,
+    CellSide, EnginePointerInput, EngineSelectionPoint, EngineWheelInput, EngineWheelRoute,
+    SelectionKind, SelectionModifiers, TerminalCell as GridCell, TerminalColor as ColorSnap,
+    TerminalCursorAnimation, TerminalCursorShape, TerminalCursorStyle, TerminalModes as ModeSnap,
+    TerminalRgb, TerminalThemeOverrides,
 };
 use vt100::{
     Callbacks, Color, CursorShape as VtCursorShape, MouseButton as VtMouseButton,
@@ -139,8 +139,8 @@ impl TerminalEngine for Engine {
     fn selection_range(&self, line: i32) -> Option<(u16, u16)> {
         Engine::selection_range(self, line)
     }
-    fn wheel_input(&mut self, _input: EngineWheelInput) -> Result<Vec<u8>, String> {
-        Err("VT100 wheel input is not implemented".into())
+    fn wheel_input(&mut self, input: EngineWheelInput) -> Result<Vec<u8>, String> {
+        Engine::wheel_input(self, input)
     }
     fn pointer_input(&mut self, input: EnginePointerInput) -> Result<Vec<u8>, String> {
         Engine::pointer_input(self, input)
@@ -455,6 +455,62 @@ impl Engine {
         (end.1 > start.1).then_some((start.1, end.1.saturating_sub(1)))
     }
 
+    /// Encode one wheel gesture from the live VT modes selected by the common Kit. The Kit owns
+    /// device-unit normalization and local scrollback; this engine adapter owns every byte sent
+    /// for the two PTY routes. `vt100` exposes its parsed mouse mode and encoding, but its pointer
+    /// event API has no wheel buttons, so the adapter applies the xterm wheel button codes to that
+    /// public state instead of guessing from provider identity or duplicating routing in Core.
+    pub fn wheel_input(&mut self, input: EngineWheelInput) -> Result<Vec<u8>, String> {
+        match input.route {
+            EngineWheelRoute::AlternateScroll => {
+                let modes = self.modes();
+                if !self.alt_active() || !modes.alternate_scroll {
+                    return Err("WHEEL_MODE_CHANGED: alternate scroll is not active".into());
+                }
+                let mut bytes = Vec::new();
+                let vertical = if input.vertical < 0 { b'A' } else { b'B' };
+                for _ in 0..input.vertical.unsigned_abs() {
+                    bytes.extend_from_slice(&[0x1b, b'O', vertical]);
+                }
+                let horizontal = if input.horizontal < 0 { b'D' } else { b'C' };
+                for _ in 0..input.horizontal.unsigned_abs() {
+                    bytes.extend_from_slice(&[0x1b, b'O', horizontal]);
+                }
+                Ok(bytes)
+            }
+            EngineWheelRoute::MouseReport => {
+                let parser = self.parser.borrow();
+                let screen = parser.screen();
+                if screen.mouse_protocol_mode() == MouseProtocolMode::None {
+                    return Err("WHEEL_MODE_CHANGED: mouse reporting is not active".into());
+                }
+                let encoding = screen.mouse_protocol_encoding();
+                let mut bytes = Vec::new();
+                let vertical = if input.vertical < 0 { 64 } else { 65 };
+                for _ in 0..input.vertical.unsigned_abs() {
+                    bytes.extend(encode_wheel_mouse_report(
+                        encoding,
+                        vertical,
+                        input.row,
+                        input.col,
+                        input.modifiers,
+                    )?);
+                }
+                let horizontal = if input.horizontal < 0 { 66 } else { 67 };
+                for _ in 0..input.horizontal.unsigned_abs() {
+                    bytes.extend(encode_wheel_mouse_report(
+                        encoding,
+                        horizontal,
+                        input.row,
+                        input.col,
+                        input.modifiers,
+                    )?);
+                }
+                Ok(bytes)
+            }
+        }
+    }
+
     pub fn pointer_input(&mut self, input: EnginePointerInput) -> Result<Vec<u8>, String> {
         let kind = match input.phase {
             soksak_kit_sidecar_terminal::mirror::PointerPhase::Down => VtMouseEventKind::Press,
@@ -528,6 +584,60 @@ impl Engine {
         screen.set_scrollback(0);
         out
     }
+}
+
+/// Encode one xterm wheel press. Codes 64..67 are vertical-up/down and
+/// horizontal-left/right; wheel events have no release report.
+fn encode_wheel_mouse_report(
+    encoding: MouseProtocolEncoding,
+    button: u8,
+    row: u16,
+    col: u16,
+    modifiers: SelectionModifiers,
+) -> Result<Vec<u8>, String> {
+    let modifiers = u8::from(modifiers.shift) * 4
+        + u8::from(modifiers.alt || modifiers.meta) * 8
+        + u8::from(modifiers.control) * 16;
+    let button = button + modifiers;
+    if encoding == MouseProtocolEncoding::Sgr {
+        return Ok(format!(
+            "\x1b[<{};{};{}M",
+            button,
+            u32::from(col) + 1,
+            u32::from(row) + 1,
+        )
+        .into_bytes());
+    }
+
+    let limit = if encoding == MouseProtocolEncoding::Utf8 {
+        2015
+    } else {
+        223
+    };
+    if usize::from(row) >= limit || usize::from(col) >= limit {
+        return Err(format!(
+            "WHEEL_POSITION_UNENCODABLE: row={row} col={col} limit={limit}"
+        ));
+    }
+    let mut bytes = b"\x1b[M".to_vec();
+    for value in [
+        u32::from(button) + 32,
+        u32::from(col) + 33,
+        u32::from(row) + 33,
+    ] {
+        if encoding == MouseProtocolEncoding::Utf8 {
+            let character = char::from_u32(value)
+                .ok_or_else(|| "WHEEL_POSITION_UNENCODABLE: invalid UTF-8 scalar".to_string())?;
+            let mut encoded = [0; 4];
+            bytes.extend_from_slice(character.encode_utf8(&mut encoded).as_bytes());
+        } else {
+            bytes.push(
+                u8::try_from(value)
+                    .map_err(|_| "WHEEL_POSITION_UNENCODABLE: legacy byte overflow".to_string())?,
+            );
+        }
+    }
+    Ok(bytes)
 }
 
 // 한 뷰 행(현재 오프셋 기준 위치 view_row)을 계약 정규형과 동형인 GridCell 벡터(길이 = cols)로
