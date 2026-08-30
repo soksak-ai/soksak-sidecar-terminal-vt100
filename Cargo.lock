@@ -382,7 +382,7 @@ dependencies = [
 
 [[package]]
 name = "soksak-sidecar-terminal-vt100"
-version = "0.0.35"
+version = "0.0.36"
 dependencies = [
  "base64",
  "getrandom 0.3.4",
@@ -449,7 +449,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vt100"
 version = "0.16.2"
-source = "git+https://github.com/min-median-max/vt100-rust.git?rev=c5cc944741d422f94ef898d7efe79edff609feb2#c5cc944741d422f94ef898d7efe79edff609feb2"
+source = "git+https://github.com/min-median-max/vt100-rust.git?rev=d557ec12724bfb85dd4d2f48146831b7f8ff2dfd#d557ec12724bfb85dd4d2f48146831b7f8ff2dfd"
 dependencies = [
  "itoa",
  "unicode-width",

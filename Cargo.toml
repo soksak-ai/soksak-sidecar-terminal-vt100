@@ -6,7 +6,7 @@
 # engine name lives in this unit's name only; the contract is engine-neutral.
 [package]
 name = "soksak-sidecar-terminal-vt100"
-version = "0.0.35"
+version = "0.0.36"
 edition = "2024"
 publish = false
 description = "Terminal-domain restore sidecar on the vt100 VT engine: mirrors PTY session output into screen state (scrollback, alt-screen, private modes), serializes it into replayable paint for warm/cold restore, and checkpoints sealed plaintext through the core PTY daemon."
@@ -30,7 +30,7 @@ path = "src/main.rs"
 # attribution ships in THIRD-PARTY-NOTICES.
 #
 # Immutable engine revision providing the DEC Special Graphics behavior required by the qualification fixture.
-vt100 = { git = "https://github.com/min-median-max/vt100-rust.git", rev = "c5cc944741d422f94ef898d7efe79edff609feb2" }
+vt100 = { git = "https://github.com/min-median-max/vt100-rust.git", rev = "d557ec12724bfb85dd4d2f48146831b7f8ff2dfd" }
 # Wire — the daemon speaks NDJSON + base64 payloads; this unit reimplements the
 # documented shape (proto module) rather than linking the core crate.
 serde_json = "1"
