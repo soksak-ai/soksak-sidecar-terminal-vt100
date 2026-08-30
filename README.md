@@ -42,6 +42,12 @@ auto-wrap, insert) are reconstructed by observing the same `unhandled_csi` strea
 grid stores a wide character as a body cell plus a continuation cell, aligned with the
 contract's canonical two-cell layout.
 
+Wheel device units and local scrollback remain owned by the common terminal Kit. When
+the Kit selects a PTY route, this engine adapter encodes xterm wheel buttons from the
+live vt100 mouse mode/encoding, or application cursor keys when alternate-screen and
+alternate-scroll are both active. A route whose mode changed is rejected rather than
+silently reinterpreted.
+
 ## The gate
 
 ```sh
@@ -73,7 +79,7 @@ Core and verifies warm and archived restore across every terminal plugin.
 ## Qualification verdict
 
 The owner pins `soksak-ai/vt100-rust` commit
-`01778784e11f9e073d24559c792546ba40ac20ad`. That engine includes DEC Special
+`d557ec12724bfb85dd4d2f48146831b7f8ff2dfd`. That engine includes DEC Special
 Graphics support, and the unchanged seven-fixture conformance suite passes 7 of 7.
 
 ## Licensing is per-unit
