@@ -3,6 +3,13 @@
 This file records completed changes. Current behavior is defined by the terminal contract and the
 documents in this directory.
 
+## 2026-08-31
+
+### 0.0.40
+
+- Assign the rewritten source commit a new immutable release identity; 0.0.39 remains bound to its
+  original source commit and bytes.
+
 ## 2026-08-30
 
 ### 0.0.39
