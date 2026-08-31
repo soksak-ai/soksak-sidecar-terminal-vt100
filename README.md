@@ -82,11 +82,11 @@ Core and verifies warm and archived restore across every terminal plugin.
 
 ## Qualification verdict
 
-The owner pins `soksak-ai/vt100-rust` commit
-`5580fbb6dd389d18afbbd430fe3942867b02ae12` and the common terminal Kit's final `v0.0.34`
-commit `20fb2d73d13e5bcde592380d3052c5d2204a592f`. That engine includes DEC Special Graphics
-plus distinct DEC 9/1001 input state, and the unchanged seven-fixture conformance suite passes 7
-of 7.
+The owner pins terminal-model revision `5580fbb6dd389d18afbbd430fe3942867b02ae12` declared in `Cargo.toml`
+and the common terminal Kit's final `v0.0.34` revision
+`20fb2d73d13e5bcde592380d3052c5d2204a592f`. The terminal model implements DEC Special Graphics
+and exposes DEC 9/1001 input state separately; the unchanged seven-fixture conformance suite
+passes 7 of 7.
 
 ## Licensing is per-unit
 

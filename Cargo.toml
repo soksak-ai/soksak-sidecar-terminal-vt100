@@ -29,7 +29,7 @@ path = "src/main.rs"
 # trait (unhandled_csi/unhandled_osc/unhandled_escape). MIT, © Jesse Luehrs; the
 # attribution ships in THIRD-PARTY-NOTICES.
 #
-# Immutable engine revision providing the DEC Special Graphics behavior required by the qualification fixture.
+# Immutable engine revision providing DEC Special Graphics and distinct DEC 9/1001 input state.
 vt100 = { git = "https://github.com/min-median-max/vt100-rust.git", rev = "5580fbb6dd389d18afbbd430fe3942867b02ae12" }
 # Wire — the daemon speaks NDJSON + base64 payloads; this unit reimplements the
 # documented shape (proto module) rather than linking the core crate.
