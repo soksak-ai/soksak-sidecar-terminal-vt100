@@ -5,6 +5,10 @@ documents in this directory.
 
 ## 2026-08-31
 
+### 0.0.41
+
+- Use the exact SDK 0.0.20 release closure for both local and public owner proofs.
+
 ### 0.0.40
 
 - Assign the rewritten source commit a new immutable release identity; 0.0.39 remains bound to its
