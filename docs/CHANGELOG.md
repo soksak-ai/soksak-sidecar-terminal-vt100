@@ -5,6 +5,10 @@ documents in this directory.
 
 ## 2026-08-31
 
+### 0.0.42
+
+- Derive the Actions Node runtime from the verified SDK package metadata.
+
 ### 0.0.41
 
 - Use the exact SDK 0.0.20 release closure for both local and public owner proofs.
