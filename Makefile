@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 STAGE ?= dist
-SDK_VERSION := 0.0.20
+SDK_VERSION := 0.0.21
 .PHONY: require-target preflight lock prepare build stage verify benchmark require-tooling require-out release attest
 require-target:
 	@test '$(origin TARGET)' = 'command line' && test -n '$(TARGET)' || { echo 'TARGET must be an explicit Make command-line variable' >&2; exit 2; }
