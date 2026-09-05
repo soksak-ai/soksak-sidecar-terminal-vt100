@@ -1,6 +1,6 @@
 {
   "id": "soksak-sidecar-terminal-vt100",
-  "version": "0.0.44",
+  "version": "0.0.45",
   "processRole": "sidecar-terminal-vt100",
   "interface": [
     {
@@ -12,6 +12,6 @@
       "version": "0.0.2"
     }
   ],
-  "runtimeDependencies": {"sidecars": [{"id": "soksak-sidecar-pty", "version": "0.0.24"}]},
+  "runtimeDependencies": {"sidecars": [{"id": "soksak-sidecar-pty", "version": "0.0.25"}]},
   "process": "dist/soksak-sidecar-terminal-vt100"
 }
