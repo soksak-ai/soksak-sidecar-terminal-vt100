@@ -6,7 +6,7 @@ const engine = readFileSync(new URL("../src/engine.rs", import.meta.url), "utf8"
 
 const exactDependencies = [
   'vt100 = { git = "https://github.com/min-median-max/vt100-rust.git", rev = "5580fbb6dd389d18afbbd430fe3942867b02ae12" }',
-  'soksak-kit-sidecar-terminal = { git = "https://github.com/soksak-ai/soksak-kit-sidecar-terminal", rev = "8d1ef287cfdfa9d2d09f5cba1946f33c67589163", features = ["integration-tests"] }',
+  'soksak-kit-sidecar-terminal = { git = "https://github.com/soksak-ai/soksak-kit-sidecar-terminal", rev = "97c20b025b042f0de9798a7c57d8c38200886e7d", features = ["integration-tests"] }',
 ];
 for (const dependency of exactDependencies) {
   if (!cargo.includes(dependency)) {
